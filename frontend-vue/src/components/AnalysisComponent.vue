@@ -6,7 +6,6 @@
     <el-table :data="frequencyData" style="width: 100%; margin-top: 20px;" v-if="frequencyData.length > 0">
       <el-table-column prop="word" label="词语" />
       <el-table-column prop="count" label="频率" />
-      <el-table-column prop="sentiment" label="情感" />
     </el-table>
   </el-card>
 </template>
@@ -25,7 +24,7 @@ const performAnalysis = async () => {
       text: inputText.value
     });
     // 将 {word: count, ...} 格式转换为 [{word: 'word', count: 'count'}, ...]
-    frequencyData.value = Object.entries(response.data.frequency).map(([word, count, sentiment]) => ({ word, count, sentiment }));
+    frequencyData.value = Object.entries(response.data.frequency).map(([word, count]) => ({ word, count}));
     
   } catch (error) {
     console.error('分析失败:', error);

@@ -5,6 +5,9 @@ import jieba
 from collections import Counter
 from flask import request, jsonify
 
+
+import jieba.analyse
+from gensim.models import Word2Vec
 # 初始化 Flask 应用
 app = Flask(__name__)
 # 使用 Flask-Cors 允许所有来源的跨域请求
@@ -21,6 +24,7 @@ def ping():
 import jieba
 from collections import Counter
 from flask import request, jsonify
+from snownlp import SnowNLP
 
 @app.route('/analyze/basic', methods=['POST'])
 def analyze_basic():
@@ -49,8 +53,8 @@ def analyze_basic():
     
     return jsonify({
         "words": meaningful_words,
-        "frequency": sorted_frequency，
-        "sentiment": sentiment_score 
+        "frequency": sorted_frequency,
+        "sentiment": sentiment_score
     })
 
 # 启动服务
