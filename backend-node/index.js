@@ -5,6 +5,7 @@ const axios = require('axios');
 const app = express();
 // 使用 cors 中间件允许前端跨域请求
 app.use(cors());
+app.use(express.json()); // Middleware to parse JSON bodies
 
 const PORT = 3000;
 const PYTHON_SERVICE_URL = 'http://localhost:5000'; // Python 服务的地址
@@ -39,6 +40,21 @@ app.get('/api/health', async (req, res) => {
         python: 'unreachable' // Python 服务无法访问
       }
     });
+  }
+});
+
+app.post('/api/analyze', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    const pythonResponse = await axios.post(`${PYTHON_SERVICE_URL}/analyze/basic`, { text });
+    res.json(pythonResponse.data);
+
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to analyze text' });
   }
 });
 
