@@ -42,7 +42,7 @@ def analyze_basic():
     # 过滤掉一些单字和标点符号可以提高质量
     stopwords = {' ', '，', '。', '！', '？', '的', '是', '了', '在', '也', '和', '就', '都', '不'} 
     meaningful_words = [word for word in words if word not in stopwords and len(word) > 1]
-    print(meaningful_words)
+  
     frequency = Counter(meaningful_words)
     sorted_frequency = dict(sorted(frequency.items(), key=lambda item: item[1], reverse=True))
 
