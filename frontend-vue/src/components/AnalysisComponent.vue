@@ -102,6 +102,7 @@ const performAnalysis = async () => {
 
 // 【新增】处理词语点击事件，获取相关性
 const handleWordClick = async (row) => {
+  console.log(analysisResult);
   const targetWord = row.word;
   ElMessage.info(`正在分析与 "${targetWord}" 相关的词...`);
   try {
@@ -109,6 +110,8 @@ const handleWordClick = async (row) => {
       words: analysisResult.words, // 传递完整的分词列表
       target_word: targetWord
     });
+
+    console.log('相关性分析响应:', response.data);
     // 更新相关性结果
     correlationResult.source_word = response.data.source_word;
     correlationResult.similar_words = response.data.similar_words;
@@ -118,6 +121,8 @@ const handleWordClick = async (row) => {
     console.error('获取相关性失败:', error);
   }
 };
+
+
 
 // 【新增】计算属性，用于格式化相关性数据以适配表格和进度条
 const formattedCorrelation = computed(() => {

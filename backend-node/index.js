@@ -46,7 +46,6 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-
 app.post("/api/analyze", async (req, res) => {
   try {
     const { text } = req.body;
@@ -63,33 +62,38 @@ app.post("/api/analyze", async (req, res) => {
 
     // 将结果存入数据库
     try {
-      const sql = "INSERT INTO analysis_history (original_text, sentiment_score, keywords, frequency_data, created_at) VALUES (?, ?, ?, ?, NOW())";
+      const sql =
+        "INSERT INTO analysis_history (original_text, sentiment_score, keywords, frequency_data, created_at) VALUES (?, ?, ?, ?, NOW())";
       const values = [
-        req.body.text, 
-        result.sentiment, 
-        result.keywords.join(','), 
-        JSON.stringify(result.frequency)
+        req.body.text,
+        result.sentiment,
+        result.keywords.join(","),
+        JSON.stringify(result.frequency),
       ];
 
-      console.log('💾 正在保存分析结果到数据库...');
+      console.log("💾 正在保存分析结果到数据库...");
       await pool.execute(sql, values);
-      console.log('✅ 分析结果已成功保存到数据库');
+      console.log("✅ 分析结果已成功保存到数据库");
     } catch (dbError) {
-      console.warn('⚠️ 数据库保存失败，但分析结果仍返回给前端:', dbError.message);
+      console.warn(
+        "⚠️ 数据库保存失败，但分析结果仍返回给前端:",
+        dbError.message
+      );
       // 数据库错误不影响返回分析结果给前端
     }
 
     res.json(pythonResponse.data);
   } catch (error) {
-    console.error('❌ 文本分析失败:', error.message);
+    console.error("❌ 文本分析失败:", error.message);
     res.status(500).json({ error: "Failed to analyze text" });
   }
 });
 
-// 【新增】相关性分析的代理接口
+// 相关性分析的代理接口
 app.post("/api/correlation", async (req, res) => {
   try {
     const { words, target_word } = req.body;
+    console.log(words, target_word);
     if (!words || !target_word) {
       return res
         .status(400)
@@ -119,35 +123,45 @@ app.post("/api/correlation", async (req, res) => {
 // 应用启动函数
 async function startServer() {
   try {
-    console.log('🔍 正在测试数据库连接...');
-    
+    console.log("🔍 正在测试数据库连接...");
+
     // 测试数据库连接
     const dbConnected = await testConnection();
-    
+    let dbInitialized = false;
+
     if (dbConnected) {
-      console.log('🔄 正在初始化数据库表结构...');
-      const dbInitialized = await initializeDatabase();
+      console.log("🔄 正在初始化数据库表结构...");
+      dbInitialized = await initializeDatabase();
       if (dbInitialized) {
-        console.log('✅ 数据库表结构初始化成功');
+        console.log("✅ 数据库表结构初始化成功");
       } else {
-        console.warn('⚠️ 数据库表结构初始化失败，但服务器将继续启动');
+        console.warn("⚠️ 数据库表结构初始化失败，但服务器将继续启动");
       }
     } else {
-      console.warn('⚠️ 数据库连接失败，但服务器将继续启动（某些功能可能不可用）');
+      console.warn(
+        "⚠️ 数据库连接失败，但服务器将继续启动（某些功能可能不可用）"
+      );
     }
-    
+
     // 启动服务器
     app.listen(PORT, () => {
       console.log(`✅ Node.js 后端服务运行在 http://localhost:${PORT}`);
-      console.log('📊 服务状态:');
+      console.log("📊 服务状态:");
       console.log(`   - Node.js 服务: ✅ 运行中`);
-      console.log(`   - 数据库连接: ${dbConnected ? '✅ 正常' : '❌ 异常'}`);
-      console.log(`   - 数据库表结构: ${dbConnected ? (dbInitialized ? '✅ 已初始化' : '❌ 初始化失败') : '❌ 未连接'}`);
+      console.log(`   - 数据库连接: ${dbConnected ? "✅ 正常" : "❌ 异常"}`);
+      console.log(
+        `   - 数据库表结构: ${
+          dbConnected
+            ? dbInitialized
+              ? "✅ 已初始化"
+              : "❌ 初始化失败"
+            : "❌ 未连接"
+        }`
+      );
       console.log(`   - Python NLP 服务: 🔄 待检测`);
     });
-    
   } catch (error) {
-    console.error('💥 服务器启动失败:', error.message);
+    console.error("💥 服务器启动失败:", error.message);
     process.exit(1);
   }
 }
