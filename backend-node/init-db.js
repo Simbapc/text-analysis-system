@@ -25,7 +25,7 @@ async function initializeDatabase() {
     }
     
     // 创建表
-    console.log('📋 正在创建 analyses 表...');
+    console.log('📋 正在创建 analysis_history 表...');
     await pool.execute(createTableSQL);
     console.log('✅ analyses 表创建成功');
     

@@ -6,11 +6,15 @@
     <main>
       <AnalysisComponent />
     </main>
+    <div style="width: 100%; max-width: 800px; margin: 2rem auto;">
+      <HistoryComponent />
+    </div>
   </div>
 </template>
 <script setup>
 // './components/AnalysisComponent.vue' 是相对于 App.vue 的路径
 import AnalysisComponent from './components/AnalysisComponent.vue';
+import HistoryComponent from './components/HistoryComponent.vue';
 </script>
 
 <style>

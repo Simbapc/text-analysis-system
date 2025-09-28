@@ -93,7 +93,6 @@ app.post("/api/analyze", async (req, res) => {
 app.post("/api/correlation", async (req, res) => {
   try {
     const { words, target_word } = req.body;
-    console.log(words, target_word);
     if (!words || !target_word) {
       return res
         .status(400)
@@ -119,6 +118,19 @@ app.post("/api/correlation", async (req, res) => {
     res.status(statusCode).json(errorMessage);
   }
 });
+
+
+app.get("/api/history", async (req, res) => {
+  try {
+    const [rows] = await pool.execute("SELECT * FROM analysis_history");
+    console.log("Fetched analysis history:", rows.length, "records");
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching analysis history:", error.message);
+    res.status(500).json({ error: "Failed to fetch analysis history" });
+  }
+});
+
 
 // 应用启动函数
 async function startServer() {
