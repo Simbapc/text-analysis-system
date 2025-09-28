@@ -110,7 +110,7 @@ const handleWordClick = async (row) => {
       target_word: targetWord
     });
 
-    
+
     // 更新相关性结果
     correlationResult.source_word = response.data.source_word;
     correlationResult.similar_words = response.data.similar_words;

@@ -124,7 +124,9 @@ app.get("/api/history", async (req, res) => {
   try {
     const [rows] = await pool.execute("SELECT * FROM analysis_history");
     console.log("Fetched analysis history:", rows.length, "records");
+    console.log(rows);
     res.json(rows);
+    
   } catch (error) {
     console.error("Error fetching analysis history:", error.message);
     res.status(500).json({ error: "Failed to fetch analysis history" });
