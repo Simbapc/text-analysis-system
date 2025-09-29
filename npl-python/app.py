@@ -135,13 +135,17 @@ def analyze_correlation():
 
 # 接口 3: spaCy 实体识别
 import spacy
+
 # 在全局加载模型以提高效率
 nlp_ner = spacy.load("zh_core_web_sm")
+
 
 @app.route("/analyze/ner", methods=["POST"])
 def analyze_ner():
     data = request.get_json()
     text = data.get("text", "")
+    if not text:
+        return jsonify({"error": "Request body must contain 'text'"}), 400
     doc = nlp_ner(text)
     entities = [{"text": ent.text, "label": ent.label_} for ent in doc.ents]
     return jsonify({"entities": entities})
@@ -149,10 +153,14 @@ def analyze_ner():
 
 import networkx as nx
 from itertools import combinations
+
+
 @app.route("/analyze/co-word-network", methods=["POST"])
 def analyze_co_word_network():
     data = request.get_json()
-    words = data.get('words', [])
+    words = data.get("words", [])
+    if not words:
+        return jsonify({"error": "Request body must contain 'words' list"}), 400
     # 1. 选择 top N 高频词作为网络节点 (简化网络)
     top_words = [item[0] for item in Counter(words).most_common(20)]
 
@@ -160,7 +168,7 @@ def analyze_co_word_network():
     co_occurrence = {}
     window_size = 5
     for i in range(len(words) - window_size + 1):
-        window = words[i:i + window_size]
+        window = words[i : i + window_size]
         # 找出窗口内属于 top_words 的词
         present_top_words = set(w for w in window if w in top_words)
         for w1, w2 in combinations(present_top_words, 2):
@@ -170,14 +178,75 @@ def analyze_co_word_network():
     # 3. 使用 networkx 构建图，并转换为前端可用的格式
     G = nx.Graph()
     for (w1, w2), weight in co_occurrence.items():
-        if weight > 1: # 过滤掉弱连接
+        if weight > 1:  # 过滤掉弱连接
             G.add_edge(w1, w2, weight=weight)
 
     # 4. 格式化为 ECharts 需要的 nodes 和 links 格式
-    nodes = [{"id": word, "name": word, "symbolSize": G.degree(word) * 5 + 10} for word in G.nodes()]
-    links = [{"source": u, "target": v, "value": d['weight']} for u, v, d in G.edges(data=True)]
+    nodes = [
+        {"id": word, "name": word, "symbolSize": G.degree(word) * 3 + 10}
+        for word in G.nodes()
+    ]
+    links = [
+        {"source": u, "target": v, "value": d["weight"]}
+        for u, v, d in G.edges(data=True)
+    ]
 
     return jsonify({"nodes": nodes, "links": links})
+
+
+# 接口 4: 主题模型 (LDA)分析
+from gensim import corpora, models
+
+# 假设 text 被拆分为段落列表: paragraphs = text.split('\n')
+# docs_words = [list(jieba.cut(p)) for p in paragraphs]
+
+
+@app.route("/analyze/topics", methods=["POST"])
+def analyze_topics():
+    data = request.get_json()
+    print(data)
+    text = data.get("text", "")
+    num_topics = data.get("num_topics", 3)
+    print(num_topics, type(num_topics))
+
+    if not text:
+        return jsonify({"error": "Text is required"}), 400
+
+    # 将文本按段落或句子拆分，模拟多文档
+    # 这里用换行符和句号作为简单的拆分依据
+    paragraphs = [p for p in text.replace("。", "\n").split("\n") if p]
+    docs_words = [list(jieba.cut(p)) for p in paragraphs]
+
+    if not docs_words:
+        return jsonify({"topics": []})
+
+    # 1. 创建词典和语料库
+    dictionary = corpora.Dictionary(docs_words)
+    corpus = [dictionary.doc2bow(doc) for doc in docs_words]
+
+    # 2. 训练 LDA 模型
+    lda_model = models.LdaModel(
+        corpus, num_topics=num_topics, id2word=dictionary, passes=15
+    )
+
+    # 3. 【核心优化】使用 show_topics(formatted=False) 获取原始数据
+    #    它返回的是 (词语, 权重) 的元组列表，而不是格式化后的字符串
+    raw_topics = lda_model.show_topics(
+        num_topics=num_topics, num_words=5, formatted=False
+    )
+
+    # 4. 【新增】将原始数据构造成对前端友好的 JSON 格式
+    formatted_topics = []
+    for topic_id, words_tuples in raw_topics:
+        topic_dict = {
+            "topicId": topic_id,
+            "words": [
+                {"term": term, "weight": float(weight)} for term, weight in words_tuples
+            ],
+        }
+        formatted_topics.append(topic_dict)
+
+    return jsonify({"topics": formatted_topics})
 
 
 # 启动服务

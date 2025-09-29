@@ -167,6 +167,24 @@ app.post("/api/co-word-network", async (req, res) => {
   }
 });
 
+app.post("/api/topics", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: "Text is required" });
+    }
+    const pythonResponse = await axios.post(
+      `${PYTHON_SERVICE_URL}/analyze/topics`,
+      { text }
+    );
+    const result = pythonResponse.data;
+    res.json(result);
+  } catch (error) {
+    console.error("❌ 主题分析失败:", error.message);
+    res.status(500).json({ error: "Failed to perform topic analysis" });
+  }
+});
+
 // 应用启动函数
 async function startServer() {
   try {
