@@ -119,21 +119,34 @@ app.post("/api/correlation", async (req, res) => {
   }
 });
 
-
 app.get("/api/history", async (req, res) => {
   try {
     const [rows] = await pool.execute("SELECT * FROM analysis_history");
     console.log("Fetched analysis history:", rows.length, "records");
-    console.log(rows);
     res.json(rows);
-    
   } catch (error) {
     console.error("Error fetching analysis history:", error.message);
     res.status(500).json({ error: "Failed to fetch analysis history" });
   }
 });
 
-
+app.post("/api/ner", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: "Text is required" });
+    }
+    const pythonResponse = await axios.post(
+      `${PYTHON_SERVICE_URL}/analyze/ner`,
+      { text }
+    );
+    const result = pythonResponse.data;
+    res.json(result);
+  } catch (error) {
+    console.error("❌ 命名实体识别失败:", error.message);
+    res.status(500).json({ error: "Failed to perform NER" });
+  }
+});
 // 应用启动函数
 async function startServer() {
   try {

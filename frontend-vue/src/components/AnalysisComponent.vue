@@ -17,6 +17,14 @@
         </el-tag>
       </el-card>
 
+      <el-card style="margin-top: 20px;" v-if="nerResult.entities.length > 0">
+        <template #header>实体识别结果</template>
+        <el-tag v-for="entity in nerResult.entities" :key="entity.text" type="info"
+          style="margin-right: 10px; margin-bottom: 10px;">
+          {{ entity.text }}<small>({{ entity.label }})</small>
+        </el-tag>
+      </el-card>
+
       <el-card style="margin-top: 20px;" v-if="correlationResult.source_word">
         <template #header>
           与 "<b>{{ correlationResult.source_word }}</b>" 最相关的词
@@ -73,6 +81,10 @@ const correlationResult = reactive({
   similar_words: []
 });
 
+const nerResult = reactive({
+  entities: []
+});
+
 // 主分析函数
 const performAnalysis = async () => {
   if (!inputText.value.trim()) {
@@ -83,6 +95,8 @@ const performAnalysis = async () => {
   // 清空上一次的相关性结果
   correlationResult.source_word = '';
   correlationResult.similar_words = [];
+  // 清空上一次的实体识别结果
+  nerResult.entities = [];
   try {
     const response = await axios.post('http://localhost:3000/api/analyze', {
       text: inputText.value
@@ -92,6 +106,12 @@ const performAnalysis = async () => {
     analysisResult.frequency = Object.entries(response.data.frequency).map(([word, count]) => ({ word, count }));
     analysisResult.sentiment = response.data.sentiment;
     analysisResult.keywords = response.data.keywords; // 保存关键词
+
+
+    const nerResponse = await axios.post('http://localhost:3000/api/ner', {
+      text: inputText.value
+    });
+    nerResult.entities = nerResponse.data.entities; // 保存实体识别结果
   } catch (error) {
     ElMessage.error('分析失败，请检查后端服务是否正常。');
     console.error('分析失败:', error);
