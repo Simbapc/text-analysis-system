@@ -19,10 +19,12 @@
 
       <el-card style="margin-top: 20px;" v-if="nerResult.entities.length > 0">
         <template #header>实体识别结果</template>
-        <el-tag v-for="entity in nerResult.entities" :key="entity.text" type="info"
-          style="margin-right: 10px; margin-bottom: 10px;">
-          {{ entity.text }}<small>({{ entity.label }})</small>
-        </el-tag>
+        <div class="entity-container">
+          <el-tag v-for="entity in nerResult.entities" :key="entity.text" :type="getEntityType(entity.label)"
+            style="margin-right: 10px; margin-bottom: 10px;" class="entity-tag">
+            {{ entity.text }}<small>({{ entity.label }})</small>
+          </el-tag>
+        </div>
       </el-card>
 
       <el-card style="margin-top: 20px;" v-if="correlationResult.source_word">
@@ -38,7 +40,6 @@
           </el-table-column>
         </el-table>
       </el-card>
-
     </el-col>
 
     <el-col :span="8">
@@ -67,6 +68,7 @@ import { ElMessage } from 'element-plus';
 
 const inputText = ref('机器学习和深度学习是人工智能的两个重要分支。机器学习算法通过学习数据中的模式来进行预测，而深度学习则使用深度神经网络结构。学习这些技术对于理解现代AI至关重要。');
 const loading = ref(false);
+
 
 // 使用 reactive 来组织分析结果
 const analysisResult = reactive({
@@ -107,11 +109,20 @@ const performAnalysis = async () => {
     analysisResult.sentiment = response.data.sentiment;
     analysisResult.keywords = response.data.keywords; // 保存关键词
 
+    // 实体识别
+    try {
+      const nerResponse = await axios.post('http://localhost:3000/api/ner', {
+        text: inputText.value
+      });
+      nerResult.entities = nerResponse.data.entities; // 保存实体识别结果
+      if (nerResult.entities.length > 0) {
+        ElMessage.success(`识别到 ${nerResult.entities.length} 个实体`);
+      }
+    } catch (nerError) {
+      console.warn('实体识别失败:', nerError);
+      // 实体识别失败不影响其他分析结果的显示
+    }
 
-    const nerResponse = await axios.post('http://localhost:3000/api/ner', {
-      text: inputText.value
-    });
-    nerResult.entities = nerResponse.data.entities; // 保存实体识别结果
   } catch (error) {
     ElMessage.error('分析失败，请检查后端服务是否正常。');
     console.error('分析失败:', error);
@@ -150,6 +161,31 @@ const formattedCorrelation = computed(() => {
     similarity: parseFloat((similarity * 100).toFixed(2))
   }));
 });
+
+// 根据实体标签获取对应的标签类型
+const getEntityType = (label) => {
+  const typeMap = {
+    'PERSON': 'primary',    // 人名 - 蓝色
+    'GPE': 'success',       // 地名 - 绿色
+    'ORG': 'warning',       // 组织 - 橙色
+    'DATE': 'info',         // 日期 - 青色
+    'TIME': 'info',         // 时间 - 青色
+    'MONEY': 'danger',      // 金额 - 红色
+    'PERCENT': 'danger',    // 百分比 - 红色
+    'CARDINAL': '',         // 基数 - 默认
+    'ORDINAL': '',          // 序数 - 默认
+    'QUANTITY': '',         // 数量 - 默认
+    'EVENT': 'warning',     // 事件 - 橙色
+    'WORK_OF_ART': 'info',  // 作品 - 青色
+    'LAW': 'warning',       // 法律 - 橙色
+    'LANGUAGE': 'info',     // 语言 - 青色
+    'NORP': 'success',      // 民族/宗教/政治团体 - 绿色
+    'FAC': 'info',          // 设施 - 青色
+    'PRODUCT': 'warning',   // 产品 - 橙色
+    'LOC': 'success',       // 位置 - 绿色
+  };
+  return typeMap[label] || '';
+};
 </script>
 
 <style scoped>
@@ -157,8 +193,26 @@ const formattedCorrelation = computed(() => {
 b {
   color: #409EFF;
 }
-</style>
 
-export default {
-name: 'AnalysisComponent'
-};
+.entity-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.entity-tag {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.entity-tag:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.entity-tag small {
+  margin-left: 4px;
+  opacity: 0.8;
+  font-size: 0.8em;
+}
+</style>

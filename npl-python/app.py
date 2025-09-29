@@ -147,6 +147,39 @@ def analyze_ner():
     return jsonify({"entities": entities})
 
 
+import networkx as nx
+from itertools import combinations
+@app.route("/analyze/co-word-network", methods=["POST"])
+def analyze_co_word_network():
+    data = request.get_json()
+    words = data.get('words', [])
+    # 1. 选择 top N 高频词作为网络节点 (简化网络)
+    top_words = [item[0] for item in Counter(words).most_common(20)]
+
+    # 2. 构建共现关系：使用滑动窗口
+    co_occurrence = {}
+    window_size = 5
+    for i in range(len(words) - window_size + 1):
+        window = words[i:i + window_size]
+        # 找出窗口内属于 top_words 的词
+        present_top_words = set(w for w in window if w in top_words)
+        for w1, w2 in combinations(present_top_words, 2):
+            key = tuple(sorted((w1, w2)))
+            co_occurrence[key] = co_occurrence.get(key, 0) + 1
+
+    # 3. 使用 networkx 构建图，并转换为前端可用的格式
+    G = nx.Graph()
+    for (w1, w2), weight in co_occurrence.items():
+        if weight > 1: # 过滤掉弱连接
+            G.add_edge(w1, w2, weight=weight)
+
+    # 4. 格式化为 ECharts 需要的 nodes 和 links 格式
+    nodes = [{"id": word, "name": word, "symbolSize": G.degree(word) * 5 + 10} for word in G.nodes()]
+    links = [{"source": u, "target": v, "value": d['weight']} for u, v, d in G.edges(data=True)]
+
+    return jsonify({"nodes": nodes, "links": links})
+
+
 # 启动服务
 if __name__ == "__main__":
     # 监听在 0.0.0.0 表示接受任何来源的连接，端口为 5000

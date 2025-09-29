@@ -147,6 +147,26 @@ app.post("/api/ner", async (req, res) => {
     res.status(500).json({ error: "Failed to perform NER" });
   }
 });
+
+app.post("/api/co-word-network", async (req, res) => {
+  try {
+    const { words } = req.body;
+    if(!words){
+      return res.status(400).json({error: "Words is required"});
+    }
+    const pythonResponse = await axios.post(
+      `${PYTHON_SERVICE_URL}/analyze/co-word-network`,
+      { words }
+    );
+    res.json(pythonResponse.data);
+  } catch (error) {
+    console.error("❌ 共词网络分析失败:", error.message);
+    res
+      .status(500)
+      .json({ error: "Failed to perform co-word network analysis" });
+  }
+});
+
 // 应用启动函数
 async function startServer() {
   try {
