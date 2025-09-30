@@ -1,46 +1,118 @@
 <template>
   <el-row :gutter="20">
     <el-col :span="16">
-      <el-card>
-        <template #header>文本内容</template>
-        <el-input v-model="inputText" :rows="8" type="textarea" placeholder="请输入要分析的文本，建议内容稍长一些以获得更好的相关性分析效果。" />
-
+      <!-- 文本输入区域 -->
+      <el-card class="input-section">
+        <template #header>
+          <div class="card-header">
+            <span>文本内容</span>
+            <el-tooltip content="建议输入较长的文本以获得更准确的分析结果" placement="top">
+              <el-icon><InfoFilled /></el-icon>
+            </el-tooltip>
+          </div>
+        </template>
+        <el-input 
+          v-model="inputText" 
+          :rows="8" 
+          type="textarea" 
+          placeholder="请输入要分析的文本，建议内容稍长一些以获得更好的相关性分析效果。"
+          resize="none"
+          show-word-limit
+          :maxlength="5000"
+        />
+        
         <div class="action-buttons">
-          <el-button type="primary" @click="performAnalysis" style="margin-top: 10px" :loading="loading">
-            1. 开始分析
+          <el-button 
+            type="primary" 
+            @click="performAnalysis" 
+            :loading="loading"
+            size="large"
+            class="primary-action"
+          >
+            <el-icon><Search /></el-icon>
+            开始分析
           </el-button>
-          <el-button type="success" @click="getCoWordNetwork" style="margin-top: 10px" :loading="networkLoading"
-            :disabled="!analysisResult.words.length">
-            2. 生成共词网络图
-          </el-button>
-          <div class="topic-action">
-            <el-input-number v-model="numTopics" :min="2" :max="10" size="small" controls-position="right"
-              style="width: 120px" />
-            <el-button type="warning" @click="getTopics" :loading="topicsLoading" :disabled="!inputText.trim()">
-              3. 提取 {{ numTopics }} 个主题
+          
+          <div class="secondary-actions">
+            <el-button 
+              type="success" 
+              @click="getCoWordNetwork" 
+              :loading="networkLoading"
+              :disabled="!analysisResult.words.length"
+              size="default"
+            >
+              <el-icon><Connection /></el-icon>
+              生成共词网络图
             </el-button>
+            
+            <div class="topic-action">
+              <el-input-number 
+                v-model="numTopics" 
+                :min="2" 
+                :max="10" 
+                size="small" 
+                controls-position="right"
+                style="width: 120px" 
+              />
+              <el-button 
+                type="warning" 
+                @click="getTopics" 
+                :loading="topicsLoading" 
+                :disabled="!inputText.trim()"
+                size="default"
+              >
+                <el-icon><Collection /></el-icon>
+                提取 {{ numTopics }} 个主题
+              </el-button>
+            </div>
           </div>
         </div>
       </el-card>
 
-      <el-card style="margin-top: 20px" v-if="nerResult.entities.length > 0">
-        <template #header>实体识别结果</template>
+      <!-- 实体识别结果 -->
+      <el-card class="result-section" v-if="nerResult.entities.length > 0">
+        <template #header>
+          <div class="card-header">
+            <span>实体识别结果</span>
+            <el-tag type="info" size="small">{{ nerResult.entities.length }} 个实体</el-tag>
+          </div>
+        </template>
         <div class="entity-container">
-          <el-tag v-for="entity in nerResult.entities" :key="entity.text" :type="getEntityType(entity.label)"
-            style="margin-right: 10px; margin-bottom: 10px" class="entity-tag">
+          <el-tag 
+            v-for="entity in nerResult.entities" 
+            :key="entity.text" 
+            :type="getEntityType(entity.label)"
+            class="entity-tag"
+            effect="light"
+          >
             {{ entity.text }}<small>({{ entity.label }})</small>
           </el-tag>
         </div>
       </el-card>
 
-      <el-card style="margin-top: 20px" v-loading="topicsLoading">
-        <template #header>主题模型分析 (LDA)</template>
+      <!-- 主题模型分析 -->
+      <el-card class="result-section" v-loading="topicsLoading">
+        <template #header>
+          <div class="card-header">
+            <span>主题模型分析 (LDA)</span>
+            <el-tag v-if="topicsData" type="info" size="small">{{ topicsData.length }} 个主题</el-tag>
+          </div>
+        </template>
         <div v-if="topicsData && topicsData.length > 0">
-          <el-collapse v-model="activeTopicNames">
-            <el-collapse-item v-for="topic in topicsData" :key="topic.topicId" :title="'主题 ' + (topic.topicId + 1)"
-              :name="topic.topicId">
-              <div>
-                <el-tag v-for="word in topic.words" :key="word.term" style="margin: 4px">
+          <el-collapse v-model="activeTopicNames" accordion>
+            <el-collapse-item 
+              v-for="topic in topicsData" 
+              :key="topic.topicId" 
+              :title="`主题 ${topic.topicId + 1}`"
+              :name="topic.topicId"
+            >
+              <div class="topic-words">
+                <el-tag 
+                  v-for="word in topic.words" 
+                  :key="word.term" 
+                  class="topic-word-tag"
+                  effect="plain"
+                >
                   {{ word.term }}
                   <span class="topic-weight">({{ (word.weight * 100).toFixed(2) }}%)</span>
                 </el-tag>
@@ -51,44 +123,101 @@
         <el-empty v-else description="请先进行基础分析，然后点击“提取主题”按钮" />
       </el-card>
 
-      <el-card style="margin-top: 20px" v-loading="networkLoading">
-        <template #header>核心词共现网络分析</template>
+      <!-- 共词网络分析 -->
+      <el-card class="result-section" v-loading="networkLoading">
+        <template #header>
+          <div class="card-header">
+            <span>核心词共现网络分析</span>
+            <el-tag v-if="networkData" type="info" size="small">{{ networkData.nodes.length }} 个节点</el-tag>
+          </div>
+        </template>
         <NetworkGraph v-if="networkData" :graphData="networkData" />
         <el-empty v-else description="请先进行基础分析，然后点击“生成共词网络图”按钮" />
       </el-card>
     </el-col>
 
     <el-col :span="8">
-      <el-card>
-        <template #header>分析结果</template>
+      <!-- 分析结果概览 -->
+      <el-card class="result-section">
+        <template #header>
+          <div class="card-header">
+            <span>分析结果</span>
+            <el-tag v-if="analysisResult.frequency.length > 0" type="info" size="small">
+              {{ analysisResult.frequency.length }} 个词语
+            </el-tag>
+          </div>
+        </template>
         <div v-if="analysisResult.frequency.length > 0">
-          <p><b>核心关键词</b></p>
-          <el-tag v-for="keyword in analysisResult.keywords" :key="keyword" type="success"
-            style="margin-right: 5px; margin-bottom: 5px">
-            {{ keyword }}
-          </el-tag>
+          <div class="keywords-section">
+            <p class="section-title"><el-icon><Star /></el-icon> 核心关键词</p>
+            <div class="keywords-container">
+              <el-tag 
+                v-for="keyword in analysisResult.keywords" 
+                :key="keyword" 
+                type="success"
+                class="keyword-tag"
+                effect="light"
+              >
+                {{ keyword }}
+              </el-tag>
+            </div>
+          </div>
+          
           <el-divider />
-          <p><b>词频统计 (点击词语分析相关性)</b></p>
-          <el-table :data="analysisResult.frequency" style="width: 100%; cursor: pointer" height="300"
-            @row-click="handleWordClick">
-            <el-table-column prop="word" label="词语" />
-            <el-table-column prop="count" label="频率" sortable />
-          </el-table>
+          
+          <div class="frequency-section">
+            <p class="section-title"><el-icon><TrendCharts /></el-icon> 词频统计</p>
+            <p class="section-subtitle">点击词语分析相关性</p>
+            <el-table 
+              :data="analysisResult.frequency" 
+              class="frequency-table" 
+              height="300" 
+              @row-click="handleWordClick"
+              stripe
+            >
+              <el-table-column prop="word" label="词语" width="120">
+                <template #default="scope">
+                  <span class="word-cell">{{ scope.row.word }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="count" label="频率" sortable width="80">
+                <template #default="scope">
+                  <el-tag size="small" type="info">{{ scope.row.count }}</el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
         <el-empty v-else description="暂无分析结果" />
       </el-card>
 
-
-
-      <el-card style="margin-top: 20px" v-if="correlationResult.source_word">
+      <!-- 相关性分析结果 -->
+      <el-card class="result-section" v-if="correlationResult.source_word">
         <template #header>
-          与 "<b>{{ correlationResult.source_word }}</b>" 最相关的词
+          <div class="card-header">
+            <span>相关性分析</span>
+            <el-tag type="info" size="small">{{ formattedCorrelation.length }} 个相关词</el-tag>
+          </div>
         </template>
-        <el-table :data="formattedCorrelation" stripe>
-          <el-table-column prop="word" label="相关词" />
-          <el-table-column prop="similarity" label="相关度">
+        <div class="correlation-header">
+          与 "<span class="source-word">{{ correlationResult.source_word }}</span>" 最相关的词
+        </div>
+        <el-table :data="formattedCorrelation" class="correlation-table" stripe>
+          <el-table-column prop="word" label="相关词" width="120">
             <template #default="scope">
-              <el-progress :percentage="scope.row.similarity" />
+              <span class="correlation-word">{{ scope.row.word }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="similarity" label="相关度" width="80">
+            <template #default="scope">
+              <div class="">
+                <el-progress 
+                  :percentage="scope.row.similarity" 
+                  :color="getSimilarityColor(scope.row.similarity)"
+                  :show-text="false"
+                />
+                <span class="similarity-text">{{ scope.row.similarity.toFixed(1) }}%</span>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -102,6 +231,14 @@ import { ref, reactive, computed } from "vue";
 import axios from "axios";
 import { ElMessage } from "element-plus";
 import NetworkGraph from "./NetworkGraph.vue";
+import { 
+  InfoFilled, 
+  Search, 
+  Connection, 
+  Collection, 
+  Star, 
+  TrendCharts 
+} from '@element-plus/icons-vue';
 // const inputText = ref('机器学习和深度学习是人工智能的两个重要分支。机器学习算法通过学习数据中的模式来进行预测，而深度学习则使用深度神经网络结构。学习这些技术对于理解现代AI至关重要。');
 const inputText = ref("");
 const loading = ref(false);
@@ -267,28 +404,81 @@ const getEntityType = (label) => {
     TIME: "info", // 时间 - 青色
     MONEY: "danger", // 金额 - 红色
     PERCENT: "danger", // 百分比 - 红色
-    CARDINAL: "", // 基数 - 默认
-    ORDINAL: "", // 序数 - 默认
-    QUANTITY: "", // 数量 - 默认
+    CARDINAL: "info", // 基数 - 青色
+    ORDINAL: "info", // 序数 - 青色
+    QUANTITY: "info", // 数量 - 青色
     EVENT: "warning", // 事件 - 橙色
-    WORK_OF_ART: "info", // 作品 - 青色
-    LAW: "warning", // 法律 - 橙色
-    LANGUAGE: "info", // 语言 - 青色
+    WORK_OF_ART: "success", // 作品 - 绿色
+    LAW: "danger", // 法律 - 红色
+    LANGUAGE: "primary", // 语言 - 蓝色
     NORP: "success", // 民族/宗教/政治团体 - 绿色
     FAC: "info", // 设施 - 青色
     PRODUCT: "warning", // 产品 - 橙色
     LOC: "success", // 位置 - 绿色
   };
-  return typeMap[label] || "";
+  return typeMap[label] || "info"; // 默认使用青色
+};
+
+// 根据相似度获取进度条颜色
+const getSimilarityColor = (similarity) => {
+  if (similarity >= 80) return '#67c23a';
+  if (similarity >= 60) return '#e6a23c';
+  if (similarity >= 40) return '#409eff';
+  return '#f56c6c';
 };
 </script>
 
 <style scoped>
-/* scoped 样式只作用于当前组件 */
+/* 通用样式 */
 b {
   color: #409eff;
 }
 
+/* 卡片头部样式 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* 输入区域样式 */
+.input-section {
+  margin-bottom: 20px;
+}
+
+/* 结果区域样式 */
+.result-section {
+  margin-top: 20px;
+}
+
+/* 按钮区域样式 */
+.action-buttons {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.primary-action {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.topic-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 实体识别样式 */
 .entity-container {
   display: flex;
   flex-wrap: wrap;
@@ -311,28 +501,145 @@ b {
   font-size: 0.8em;
 }
 
-.action-buttons {
-  margin-top: 15px;
+/* 主题模型样式 */
+.topic-words {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  gap: 6px;
 }
 
-.action-buttons>.el-button {
-  margin-right: 10px;
-  margin-bottom: 10px;
+.topic-word-tag {
+  transition: all 0.3s ease;
 }
 
-.topic-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+.topic-word-tag:hover {
+  transform: scale(1.05);
 }
 
 .topic-weight {
   color: #909399;
   font-size: 0.8em;
   margin-left: 4px;
+}
+
+/* 分析结果样式 */
+.section-title {
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-subtitle {
+  color: #909399;
+  font-size: 0.85em;
+  margin-bottom: 12px;
+}
+
+.keywords-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.keyword-tag {
+  transition: all 0.3s ease;
+}
+
+.keyword-tag:hover {
+  transform: scale(1.05);
+}
+
+.frequency-table {
+  width: 100%;
+}
+
+.word-cell {
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.word-cell:hover {
+  color: #409eff;
+}
+
+/* 相关性分析样式 */
+.correlation-header {
+  margin-bottom: 16px;
+  font-size: 0.95em;
+  color: #606266;
+}
+
+.source-word {
+  color: #409eff;
+  font-weight: 600;
+}
+
+.correlation-table {
+  width: 100%;
+}
+
+.correlation-word {
+  font-weight: 500;
+}
+
+.similarity-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.similarity-text {
+  font-size: 0.85em;
+  color: #909399;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .el-col {
+    width: 100%;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .secondary-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .topic-action {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+/* 动画效果 */
+.el-card {
+  transition: all 0.3s ease;
+}
+
+.el-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.el-tag {
+  transition: all 0.3s ease;
+}
+
+.el-button {
+  transition: all 0.3s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 </style>

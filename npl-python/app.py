@@ -197,10 +197,8 @@ from gensim import corpora, models
 @app.route("/analyze/topics", methods=["POST"])
 def analyze_topics():
     data = request.get_json()
-    print(data)
     text = data.get("text", "")
     num_topics = data.get("num_topics", 3)
-    print(num_topics, type(num_topics))
 
     if not text:
         return jsonify({"error": "Text is required"}), 400
