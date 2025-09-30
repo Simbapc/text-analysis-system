@@ -151,8 +151,8 @@ app.post("/api/ner", async (req, res) => {
 app.post("/api/co-word-network", async (req, res) => {
   try {
     const { words } = req.body;
-    if(!words){
-      return res.status(400).json({error: "Words is required"});
+    if (!words) {
+      return res.status(400).json({ error: "Words is required" });
     }
     const pythonResponse = await axios.post(
       `${PYTHON_SERVICE_URL}/analyze/co-word-network`,
@@ -169,13 +169,16 @@ app.post("/api/co-word-network", async (req, res) => {
 
 app.post("/api/topics", async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, num_topics } = req.body;
     if (!text) {
       return res.status(400).json({ error: "Text is required" });
     }
+    if (!num_topics) {
+      return res.status(400).json({ error: "num_topics is required" });
+    }
     const pythonResponse = await axios.post(
       `${PYTHON_SERVICE_URL}/analyze/topics`,
-      { text }
+      { text, num_topics }
     );
     const result = pythonResponse.data;
     res.json(result);

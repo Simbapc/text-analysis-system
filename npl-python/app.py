@@ -138,8 +138,6 @@ import spacy
 
 # 在全局加载模型以提高效率
 nlp_ner = spacy.load("zh_core_web_sm")
-
-
 @app.route("/analyze/ner", methods=["POST"])
 def analyze_ner():
     data = request.get_json()
@@ -150,10 +148,9 @@ def analyze_ner():
     entities = [{"text": ent.text, "label": ent.label_} for ent in doc.ents]
     return jsonify({"entities": entities})
 
-
+# 接口 4: 词语共现网络
 import networkx as nx
 from itertools import combinations
-
 
 @app.route("/analyze/co-word-network", methods=["POST"])
 def analyze_co_word_network():
@@ -194,12 +191,8 @@ def analyze_co_word_network():
     return jsonify({"nodes": nodes, "links": links})
 
 
-# 接口 4: 主题模型 (LDA)分析
+# 接口 5: 主题模型 (LDA)分析
 from gensim import corpora, models
-
-# 假设 text 被拆分为段落列表: paragraphs = text.split('\n')
-# docs_words = [list(jieba.cut(p)) for p in paragraphs]
-
 
 @app.route("/analyze/topics", methods=["POST"])
 def analyze_topics():
